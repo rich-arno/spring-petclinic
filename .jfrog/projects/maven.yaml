@@ -1,0 +1,11 @@
+version: 1
+type: maven
+resolver:
+  serverId: psemea
+  snapshotRepo: rich-maven-dev
+  releaseRepo: rich-maven-dev
+deployer:
+  serverId: psemea
+  snapshotRepo: rich-maven-dev-local
+  releaseRepo: rich-maven-dev-local
+  publishBuildInfo: true
