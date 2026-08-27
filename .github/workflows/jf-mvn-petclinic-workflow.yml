@@ -1,6 +1,6 @@
 name: JFrog CLI Security Scanning - Manual Maven Runner Dispatch
 on:
-  workflow_dispatch:
+  push:
     inputs:
       build_number:
         description: 'Manual Build Number to trace in Artifactory'
