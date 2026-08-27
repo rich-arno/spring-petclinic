@@ -52,21 +52,21 @@ jobs:
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
 
       # Step 3.5: Diagnostics - Show active JFrog CLI connection profiles
-      - name: "Diagnostics: Show active JFrog CLI connection profiles"
+      - name: \"Diagnostics: Show active JFrog CLI connection profiles\"
         run: |
-          echo "Active connection configuration in current runner session:"
+          echo \"Active connection configuration in current runner session:\"
           jf c s
 
       # Step 4: CLEAN SLATE FIRST (Wipe compiled target and old local config files before runs)
       - name: Clean Workspace and Local Caches
         run: |
-          echo "Wiping target directory..."
+          echo \"Wiping target directory...\"
           rm -rf target
           
-          echo "Deleting old Maven config files to prevent workspace state pollution..."
+          echo \"Deleting old Maven config files to prevent workspace state pollution...\"
           rm -rf .jfrog
           
-          echo "Clearing project-specific dependency directories if present..."
+          echo \"Clearing project-specific dependency directories if present...\"
           # Force Maven wrapper to be executable in case SCM permissions were lost
           if [ -f mvnw ]; then
             chmod +x mvnw
@@ -85,89 +85,95 @@ jobs:
             --repo-deploy-snapshots=maven-local
 
       # Step 5.5: Diagnostics - Verify generated Maven project configuration
-      - name: "Diagnostics: Show active Maven configuration"
+      - name: \"Diagnostics: Show active Maven configuration\"
         run: |
-          echo "Checking .jfrog project configuration directory:"
+          echo \"Checking .jfrog project configuration directory:\"
           if [ -d .jfrog ]; then
-            find .jfrog -type f -exec echo "File: {}" \; -exec cat {} \;
+            find .jfrog -type f -exec echo \"File: {}\" \; -exec cat {} \;
           else
-            echo "No local .jfrog configuration found!"
+            echo \"No local .jfrog configuration found!\"
           fi
 
       # Step 6: Perform fresh Maven dependency resolution and compilation to trigger build-info tracking
       # We append -U to force check remote repositories and bypass local cached states
       - name: Resolve and Compile Maven Project
         run: |
-          echo "Compiling and packaging Maven project..."
+          echo \"Compiling and packaging Maven project...\"
           jf mvn clean install -U -Dcheckstyle.skip --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
 
       # =========================================================================
-      # PHASE 1: MAC-COMPATIBLE "JF AUDIT" SCANS & VERIFICATION (SOURCE CODE COMPOSITION ANALYSIS)
+      # PHASE 1: MAC-COMPATIBLE \"JF AUDIT\" SCANS & VERIFICATION (SOURCE CODE COMPOSITION ANALYSIS)
       # =========================================================================
 
       # Step 7: Verify Maven build dependency tree resolution before Xray auditing
       - name: Verify Maven Build
         run: |
-          echo "Verifying dependency tree..."
+          echo \"Verifying dependency tree...\"
           jf mvn dependency:tree -DoutputFile=/tmp/dependency-tree.txt -Dcheckstyle.skip
-          echo "Dependencies verified successfully"
+          echo \"Dependencies verified successfully\"
 
       # Combination 1.1: Pure Software Composition Analysis (SCA Only)
       # Compatible: Yes! Bypasses dynamic library scans to prevent background engine crashes on local Mac runners
-      - name: "jf audit [Combination 1.1]: Pure SCA Scan (SCA Only)"
+      - name: \"jf audit [Combination 1.1]: Pure SCA Scan (SCA Only)\"
         run: |
-          echo "Executing third-party dependency scan (SCA Mode)..."
+          echo \"Executing third-party dependency scan (SCA Mode)...\"
           jf audit --sca --without-contextual-analysis --min-severity=Medium
 
       # Combination 1.2: Governance Scan tied to Xray Watches & Policies (SCA Only)
       # Compatible: Yes! Evaluates against organization-specific watches using safe SCA logic
-      - name: "jf audit [Combination 1.2]: Policy Enforcement Scan in SCA Mode"
+      - name: \"jf audit [Combination 1.2]: Policy Enforcement Scan in SCA Mode\"
         run: |
-          echo "Auditing against enterprise watches in SCA mode..."
+          echo \"Auditing against enterprise watches in SCA mode...\"
           jf audit --sca --without-contextual-analysis --watches=production-compliance-watch --fail=false
 
       # =========================================================================
-      # PHASE 1.5: BUILD-INFO PUBLISHING (METADATA TRACING & SBOM SECURING)
-      # =========================================================================
-
-      # Compile cached partials and publish the complete Build Info to Artifactory
-      - name: Publish Build Info
-        run: |
-          echo "Publishing complete Build Info to Artifactory..."
-          jf rt bp $BUILD_NAME $BUILD_NUMBER \
-            --build-url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --collect-env \
-            --collect-git-info \
-            --dot-git-path .
-
-      # =========================================================================
-      # PHASE 2: MAC-COMPATIBLE "JF SCAN" & "JF DOCKER SCAN" (BINARY & LAYER SCANS)
+      # PHASE 2: MAC-COMPATIBLE \"JF SCAN\" & \"JF DOCKER SCAN\" (BINARY & LAYER SCANS)
       # =========================================================================
 
       # Compile container for Binary Scanning Demonstrations
+      # We purge the old local tag first to bypass layer desynchronization or cached BuildKit state collisions
       - name: Build Local Container Image
         run: |
+          echo \"Cleaning any old image cache to prevent desynced metadata...\"
+          docker rmi -f $DOCKER_REGISTRY/$IMAGE_TAG || true
+          
           export DOCKER_BUILDKIT=0
           jf docker build --no-cache -t $DOCKER_REGISTRY/$IMAGE_TAG . --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
 
       # Pushing the image records the artifact footprint in the Build-Info cache before we publish
       - name: Push Container to Artifactory
         run: |
-          echo "Pushing tagged image to Artifactory Docker registry..."
+          echo \"Pushing tagged image to Artifactory Docker registry...\"
           jf docker push $DOCKER_REGISTRY/$IMAGE_TAG --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
 
       # Combination 2.1: Pure OCI Layer SCA Scan
       # Compatible: Yes! Bypasses local binary analyzerManager execution to avoid macOS Gatekeeper blocks
-      - name: "jf docker scan [Combination 2.1]: Pure OCI Image SCA (Bypass engine wrappers)"
+      - name: \"jf docker scan [Combination 2.1]: Pure OCI Image SCA (Bypass engine wrappers)\"
         run: |
-          echo "Performing binary container dependency checks (SCA Mode)..."
+          echo \"Performing binary container dependency checks (SCA Mode)...\"
           jf docker scan $DOCKER_REGISTRY/$IMAGE_TAG --sca --without-contextual-analysis
 
       # Combination 2.2: Directory/Binary scan on local workspace (SCA Only)
       # To prevent any dangling target binaries, caching issues, or system files from failing the build,
       # we exclude target, .m2 directories, and add continue-on-error to ensure a green status check on GitHub.
-      - name: "jf scan [Combination 2.2]: Local Directory Audit"
+      - name: \"jf scan [Combination 2.2]: Local Directory Audit\"
         continue-on-error: true
         run: |
-          echo "Scanning workspace path natively (SCA Mode)..."
-          jf scan . --sca --without-contextual-analysis --min-severity=High --exclusions="*target*,*node_modules*,*.m2*"
+          echo \"Scanning workspace path natively (SCA Mode)...\"
+          jf scan . --sca --without-contextual-analysis --min-severity=High --exclusions=\"*target*,*node_modules*,*.m2*\"
+
+      # =========================================================================
+      # PHASE 3: UNIFIED BUILD-INFO PUBLISHING (METADATA TRACING & SBOM SECURING)
+      # =========================================================================
+
+      # Compile cached partials and publish the complete Build Info to Artifactory
+      # Restructured: Moved to the very end of the entire SDLC pipeline so that both the 
+      # Maven modules AND the Docker modules are fully captured in the published payload.
+      - name: Publish Build Info
+        run: |
+          echo \"Publishing complete, unified Build Info to Artifactory...\"
+          jf rt bp $BUILD_NAME $BUILD_NUMBER \
+            --build-url=\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\" \
+            --collect-env \
+            --collect-git-info \
+            --dot-git-path .
