@@ -1,11 +1,11 @@
 version: 1
 type: maven
 resolver:
-  serverId: psemea
-  snapshotRepo: rich-maven-dev
-  releaseRepo: rich-maven-dev
+    serverId: ra_self
+    snapshotRepo: maven-virtual
+    releaseRepo: maven-virtual
 deployer:
-  serverId: psemea
-  snapshotRepo: rich-maven-dev-local
-  releaseRepo: rich-maven-dev-local
-  publishBuildInfo: true
+    serverId: ra_self
+    snapshotRepo: maven-local
+    releaseRepo: maven-local
+useWrapper: true

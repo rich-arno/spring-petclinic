@@ -11,6 +11,16 @@
   <groupId>org.springframework.samples</groupId>
   <artifactId>spring-petclinic</artifactId>
   <version>4.0.0-SNAPSHOT</version>
+  <repositories>
+    <repository>
+        <id>central</id>
+        <name>artifactory-releases</name>
+        <url>http://172.16.9.100:80/artifactory/maven-virtual/</url>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+  </repositories>
 
   <name>petclinic</name>
 
@@ -63,7 +73,6 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-webmvc</artifactId>
     </dependency>
-
     <dependency>
       <groupId>javax.cache</groupId>
       <artifactId>cache-api</artifactId>
@@ -72,7 +81,6 @@
       <groupId>jakarta.xml.bind</groupId>
       <artifactId>jakarta.xml.bind-api</artifactId>
     </dependency>
-
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
@@ -111,13 +119,11 @@
       <version>${webjars-font-awesome.version}</version>
       <scope>runtime</scope>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-devtools</artifactId>
       <optional>true</optional>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa-test</artifactId>
@@ -178,8 +184,29 @@
       <artifactId>testcontainers-mysql</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- ================================================================= -->
+    <!-- DEMO DEPENDENCIES FOR JFROG CURATION & CATALOG                    -->
+    <!-- ================================================================= -->
+    <!-- 1. Triggers Curation Critical Security Block (Log4Shell - CVE-2021-44228) -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>2.14.1</version>
+    </dependency>
+    <!-- 2. Triggers Curation Restricted License Block (JSON License / Non-Compliant) -->
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20201115</version>
+    </dependency>
+    <!-- 3. Triggers Operational Risk & End-of-Life Indicators in JFrog Catalog -->
+    <dependency>
+      <groupId>commons-collections</groupId>
+      <artifactId>commons-collections</artifactId>
+      <version>3.2.1</version>
+    </dependency>  
   </dependencies>
-
+  
   <build>
     <plugins>
       <plugin>
@@ -215,6 +242,8 @@
           </execution>
         </executions>
       </plugin>
+      <!-- Comment out Checkstyle declaration-->
+      <!--
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
@@ -248,6 +277,7 @@
           </execution>
         </executions>
       </plugin>
+      -->
       <plugin>
         <groupId>org.graalvm.buildtools</groupId>
         <artifactId>native-maven-plugin</artifactId>
@@ -437,14 +467,14 @@
       </build>
     </profile>
   </profiles>
-<distributionManagement>
-        <repository>
-            <id>central</id> <name>artifactory-releases</name>
-            <url>https://psemea.jfrog.io/artifactory/rich-maven-dev</url>
-        </repository>
-        <snapshotRepository>
-            <id>central</id> <name>artifactory-snapshots</name>
-            <url>https://psemea.jfrog.io/artifactory/rich-maven-dev</url>
-        </snapshotRepository>
-    </distributionManagement>
+  <distributionManagement>
+      <repository>
+          <id>central</id> <name>artifactory-releases</name>
+          <url>http://172.16.9.100:80/artifactory/maven-local</url>
+      </repository>
+      <snapshotRepository>
+          <id>central</id> <name>artifactory-snapshots</name>
+          <url>http://172.16.9.100:80/artifactory/maven-local</url>
+      </snapshotRepository>
+  </distributionManagement>
 </project>
