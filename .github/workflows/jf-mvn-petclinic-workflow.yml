@@ -22,9 +22,17 @@ jobs:
       IMAGE_TAG: spring-petclinic:${{ github.event.inputs.build_number || github.run_number }}
       JF_URL: ${{ secrets.JF_URL }}
       JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+      JFROG_CLI_LOG_LEVEL: DEBUG
 
     steps:
-      # Step 1: Checkout the complete repository history (Crucial for Git history extraction!)
+      # Step 0: Fix macOS Path Trap for non-interactive runners (Ensure Homebrew binaries are in PATH)
+      - name: "Setup macOS Runner Environment PATH"
+        run: |
+          echo "Adding common macOS package manager bin directories to GITHUB_PATH..."
+          echo "/opt/homebrew/bin" >> $GITHUB_PATH
+          echo "/usr/local/bin" >> $GITHUB_PATH
+
+      # Step 1: Checkout the complete repository history
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
@@ -99,13 +107,14 @@ jobs:
       # =========================================================================
 
       # Combination 1.1: Pure Software Composition Analysis (SCA Only)
-      # Clean auto-detection of Maven pom.xml (without incorrect technology flags)
+      # Compatible: Yes! Bypasses dynamic library scans to prevent background engine crashes on local Mac runners
       - name: "jf audit [Combination 1.1]: Pure SCA Scan (SCA Only)"
         run: |
           echo "Executing third-party dependency scan (SCA Mode)..."
           jf audit --sca --without-contextual-analysis --min-severity=Medium
 
       # Combination 1.2: Governance Scan tied to Xray Watches & Policies (SCA Only)
+      # Compatible: Yes! Evaluates against organization-specific watches using safe SCA logic
       - name: "jf audit [Combination 1.2]: Policy Enforcement Scan in SCA Mode"
         run: |
           echo "Auditing against enterprise watches in SCA mode..."
@@ -116,17 +125,10 @@ jobs:
       # =========================================================================
 
       # Compile container for Binary Scanning Demonstrations
-      # We pass --build-name and --build-number to let JFrog track the Docker image as part of our Build-Info record!
       - name: Build Local Container Image
         run: |
           export DOCKER_BUILDKIT=0
           jf docker build --no-cache -t $DOCKER_REGISTRY/$IMAGE_TAG . --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
-
-      # Combination 2.1: Pure OCI Layer SCA Scan
-      - name: "jf docker scan [Combination 2.1]: Pure OCI Image SCA (Bypass engine wrappers)"
-        run: |
-          echo "Performing binary container dependency checks (SCA Mode)..."
-          jf docker scan $DOCKER_REGISTRY/$IMAGE_TAG --sca --without-contextual-analysis
 
       # Pushing the image records the artifact footprint in the Build-Info cache before we publish
       - name: Push Container to Artifactory
@@ -134,19 +136,7 @@ jobs:
           echo "Pushing tagged image to Artifactory Docker registry..."
           jf docker push $DOCKER_REGISTRY/$IMAGE_TAG --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
 
-      # Combination 2.2: Directory/Binary scan on local workspace (SCA Only)
-      - name: "jf scan [Combination 2.2]: Local Directory Audit"
-        continue-on-error: true
-        run: |
-          echo "Scanning workspace path natively (SCA Mode)..."
-          jf scan . --sca --without-contextual-analysis --min-severity=High --exclusions="*target*,*node_modules*,*.m2*"
-
-      # =========================================================================
-      # PHASE 3: COMPILING & PUBLISHINGCentralized BUILD-INFO METADATA
-      # =========================================================================
-
       # Step 11: Compile cached partials and publish the complete Build Info to Artifactory
-      # This step collects VCS history (Git), environment variables, and the CI run details
       - name: Publish Build Info
         run: |
           echo "Publishing complete Build Info to Artifactory..."
