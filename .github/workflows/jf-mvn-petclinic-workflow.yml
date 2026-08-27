@@ -103,14 +103,14 @@ jobs:
       - name: "jf audit [Combination 1.1]: Pure SCA Scan (SCA Only)"
         run: |
           echo "Executing third-party dependency scan (SCA Mode)..."
-          jf audit --maven --sca --without-contextual-analysis --min-severity=Medium
+          jf audit --sca --without-contextual-analysis --min-severity=Medium
 
       # Combination 1.2: Governance Scan tied to Xray Watches & Policies (SCA Only)
       # Compatible: Yes! Evaluates against organization-specific watches using safe SCA logic
       - name: "jf audit [Combination 1.2]: Policy Enforcement Scan in SCA Mode"
         run: |
           echo "Auditing against enterprise watches in SCA mode..."
-          jf audit --maven --sca --without-contextual-analysis --watches=production-compliance-watch --fail=false
+          jf audit --sca --without-contextual-analysis --watches=production-compliance-watch --fail=false
 
       # =========================================================================
       # PHASE 2: MAC-COMPATIBLE "JF SCAN" & "JF DOCKER SCAN" (BINARY & LAYER SCANS)
